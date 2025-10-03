@@ -46,11 +46,14 @@ class SmartNewsFilter:
                 'dateEnd': to_date.strftime('%Y-%m-%d'),
                 'includeArticleConcepts': 'true',
                 'includeArticleCategories': 'true',
-                'apiKey': self.newsapi_key
+                'apiKey': self.newsapi_key,
+                # Add timestamp to prevent caching
+                'timestamp': int(datetime.now().timestamp())
             }
             
             print(f"Fetching {num_articles} raw news articles about: {query}")
             print(f"Time range: {from_date} to {to_date}")
+            print(f"Request timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
             response = requests.get(url, params=params)
             data = response.json()

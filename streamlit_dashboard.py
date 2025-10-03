@@ -105,8 +105,8 @@ def fetch_live_news(api_key, query, num_articles, hours_back):
 def fetch_smart_filtered_news(api_key, query, num_articles, hours_back):
     """Fetch real news from NewsAPI and use smart filtering"""
     try:
-        with st.spinner("Fetching real news from NewsAPI and applying smart filtering..."):
-            # Initialize smart filter
+        with st.spinner(f"Fetching fresh news from last {hours_back} hours..."):
+            # Always create a new filter instance to avoid caching
             smart_filter = SmartNewsFilter(api_key)
             articles = smart_filter.process_news_pipeline(
                 query=query,
@@ -123,8 +123,12 @@ def fetch_smart_filtered_news(api_key, query, num_articles, hours_back):
             # The smart filter already provides risk analysis, but we can enhance it
             results = st.session_state.analyzer.analyze_articles(articles)
         
+        # Always update session state with fresh data
         st.session_state.news_data = articles
         st.session_state.analysis_results = results
+        
+        # Show fresh data info
+        st.info(f"✅ Fetched {len(articles)} fresh articles from last {hours_back} hours")
         
         return results
     except Exception as e:
@@ -308,21 +312,55 @@ def main():
     num_articles = st.sidebar.slider("Number of Articles", 5, 50, 20)
     hours_back = st.sidebar.slider("Hours Back", 1, 168, 24)
     
+    # Show time range
+    from datetime import datetime, timedelta
+    to_time = datetime.now()
+    from_time = to_time - timedelta(hours=hours_back)
+    st.sidebar.info(f"Searching from: {from_time.strftime('%Y-%m-%d %H:%M')} to {to_time.strftime('%Y-%m-%d %H:%M')}")
+    
     # Load Models
     if st.sidebar.button("🔄 Load Models"):
         load_models()
     
     # Fetch News
-    if st.sidebar.button("📰 Fetch & Analyze News"):
-        if st.session_state.analyzer is None:
-            st.error("Please load models first!")
-        else:
-            if api_type == "Smart Filter (NewsAPI + AI)":
-                results = fetch_smart_filtered_news(api_key, query, num_articles, hours_back)
+    col1, col2 = st.sidebar.columns(2)
+    
+    with col1:
+        if st.button("📰 Fetch & Analyze News"):
+            if st.session_state.analyzer is None:
+                st.error("Please load models first!")
             else:
-                results = fetch_live_news(api_key, query, num_articles, hours_back)
-            if results:
-                st.success(f"Successfully analyzed {len(results)} articles!")
+                if api_type == "Smart Filter (NewsAPI + AI)":
+                    results = fetch_smart_filtered_news(api_key, query, num_articles, hours_back)
+                else:
+                    results = fetch_live_news(api_key, query, num_articles, hours_back)
+                if results:
+                    st.success(f"Successfully analyzed {len(results)} articles!")
+                    # Store timestamp
+                    st.session_state.last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    with col2:
+        if st.button("🔄 Refresh Data"):
+            if st.session_state.analyzer is None:
+                st.error("Please load models first!")
+            else:
+                if api_type == "Smart Filter (NewsAPI + AI)":
+                    results = fetch_smart_filtered_news(api_key, query, num_articles, hours_back)
+                else:
+                    results = fetch_live_news(api_key, query, num_articles, hours_back)
+                if results:
+                    st.success(f"Successfully refreshed {len(results)} articles!")
+                    st.session_state.last_fetch_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Show last fetch time and clear data button
+    if hasattr(st.session_state, 'last_fetch_time'):
+        st.sidebar.info(f"Last fetched: {st.session_state.last_fetch_time}")
+    
+    if st.sidebar.button("🗑️ Clear Data"):
+        st.session_state.analysis_results = None
+        st.session_state.news_data = None
+        st.session_state.last_fetch_time = None
+        st.success("Data cleared! Fetch new data to see results.")
     
     # Main Content
     if st.session_state.analysis_results:
