@@ -1,0 +1,166 @@
+[
+  {
+    "Title": "Mahindra & Mahindra Unveils Aggressive EV Expansion Plan, Targets Higher Market Share",
+    "Explanation": "This news indicates intensified competition in India's rapidly growing EV passenger vehicle segment, where Tata Motors currently holds a dominant market position. Mahindra's announced platform, diverse portfolio, and substantial investment could erode Tata's market share, exert pressure on pricing strategies, and significantly increase marketing and R&D costs to maintain leadership.",
+    "Affected_Nodes": [
+      "EV Division",
+      "Sales & Marketing",
+      "Product Development",
+      "Financials"
+    ],
+    "Risk_Type": "Strategic",
+    "Severity": "High",
+    "Risk_Score": 8,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Global Lithium Prices See Unexpected Surge Amidst Geopolitical Tensions",
+    "Explanation": "Tata Motors, like other EV manufacturers, relies heavily on imported lithium-ion batteries and their raw materials. A sudden and sustained price surge in critical inputs like lithium, cobalt, or nickel due to geopolitical instability or increased demand would directly impact production costs for its entire EV portfolio, potentially eroding profit margins or necessitating price increases that could affect consumer demand and sales volumes.",
+    "Affected_Nodes": [
+      "Supply Chain",
+      "EV Manufacturing",
+      "Financials",
+      "Product Pricing"
+    ],
+    "Risk_Type": "Supply Chain",
+    "Severity": "High",
+    "Risk_Score": 9,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Indian Government Hints at Review of FAME-II EV Subsidies Post-2024",
+    "Explanation": "The FAME-II scheme has been instrumental in driving EV adoption in India by making electric vehicles more affordable for consumers. A potential reduction, discontinuation, or significant restructuring of these subsidies could substantially increase the upfront cost for buyers, thereby slowing down the growth of the EV market and directly impacting Tata Motors' sales targets and profitability in its burgeoning EV segment.",
+    "Affected_Nodes": [
+      "EV Sales",
+      "Financials",
+      "Regulatory Affairs",
+      "Market Demand"
+    ],
+    "Risk_Type": "Regulatory",
+    "Severity": "High",
+    "Risk_Score": 8,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "New Outbreak in Asian Chip Manufacturing Hub Threatens Global Auto Production",
+    "Explanation": "Despite recent easing, the automotive industry remains highly vulnerable to semiconductor supply chain disruptions. A new health crisis, natural disaster, or geopolitical event impacting a major chip manufacturing region could lead to renewed production delays for both Tata Motors' internal combustion engine (ICE) and electric vehicles (EVs), affecting delivery schedules, sales, and potentially leading to significant inventory buildup of unfinished cars.",
+    "Affected_Nodes": [
+      "Supply Chain",
+      "Manufacturing Operations",
+      "JLR",
+      "Passenger Vehicles",
+      "Commercial Vehicles"
+    ],
+    "Risk_Type": "Supply Chain",
+    "Severity": "High",
+    "Risk_Score": 9,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Luxury Car Market Faces Headwinds as Global Economic Outlook Worsens",
+    "Explanation": "Tata Motors' premium subsidiary, Jaguar Land Rover (JLR), is heavily reliant on global luxury car sales, particularly in key markets like Europe, North America, and China. A deteriorating global economic outlook, high inflation, or rising interest rates could lead to reduced consumer spending on high-value luxury vehicles, directly impacting JLR's sales volumes, profitability, and overall financial performance for Tata Motors.",
+    "Affected_Nodes": [
+      "JLR",
+      "Financials",
+      "International Sales",
+      "Strategic Planning"
+    ],
+    "Risk_Type": "Financial",
+    "Severity": "Medium",
+    "Risk_Score": 7,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Upcoming BS7 Emission Norms: Auto Industry Warns of Significant R&D Costs",
+    "Explanation": "India's potential move towards more stringent emission norms (e.g., BS7 equivalent or stricter Real Driving Emissions targets) would necessitate substantial R&D investment for Tata Motors to upgrade its internal combustion engine (ICE) portfolio. This could increase production costs, potentially impact vehicle pricing, divert financial and engineering resources from EV development, and pose a significant risk if compliance proves challenging or delayed.",
+    "Affected_Nodes": [
+      "R&D",
+      "ICE Product Portfolio",
+      "Manufacturing",
+      "Financials",
+      "Regulatory Affairs"
+    ],
+    "Risk_Type": "Regulatory",
+    "Severity": "Medium",
+    "Risk_Score": 7,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Breakthrough in Solid-State Battery Technology Announced by Asian EV Major",
+    "Explanation": "While Tata Motors is actively investing in current lithium-ion battery technology, a major breakthrough by a competitor in next-generation technologies like solid-state batteries (offering significantly higher energy density, faster charging, and improved safety) could render Tata's current EV offerings less competitive in the mid-to-long term. This would necessitate accelerated and costly R&D investment to catch up, risking market disadvantage if delayed.",
+    "Affected_Nodes": [
+      "EV Product Development",
+      "R&D",
+      "Strategic Planning",
+      "Market Competitiveness"
+    ],
+    "Risk_Type": "Strategic",
+    "Severity": "High",
+    "Risk_Score": 8,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Workers' Union at Key Automotive Manufacturing Belt Threatens Strike Over Wage Demands",
+    "Explanation": "Any significant labor dispute or strike at Tata Motors' own manufacturing plants or those of critical Tier 1 suppliers could lead to severe production halts, delays in vehicle deliveries, and substantial financial losses. This impacts delivery schedules, customer satisfaction, and overall operational efficiency, potentially also damaging brand reputation.",
+    "Affected_Nodes": [
+      "Manufacturing Operations",
+      "Supply Chain",
+      "Human Resources",
+      "Financials"
+    ],
+    "Risk_Type": "Operational",
+    "Severity": "Medium",
+    "Risk_Score": 6,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Industry Report Highlights Slowdown in Public EV Charging Infrastructure Rollout",
+    "Explanation": "While Tata Motors is a leader in EV sales, the pace of public charging infrastructure development is a critical enabler for wider EV adoption across India. A slowdown in rollout could exacerbate 'range anxiety' among potential buyers, hindering further growth in the EV market and potentially impacting Tata Motors' future EV sales targets, particularly in semi-urban and rural areas.",
+    "Affected_Nodes": [
+      "EV Sales",
+      "Market Development",
+      "Strategic Planning",
+      "Customer Experience"
+    ],
+    "Risk_Type": "Strategic",
+    "Severity": "Medium",
+    "Risk_Score": 7,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  },
+  {
+    "Title": "Major Ransomware Attack Disrupts Operations at Global Automotive Supplier",
+    "Explanation": "Tata Motors, like all modern automakers, relies heavily on complex IT systems, connected vehicles, and a vast digital supply chain. A successful cyberattack on a key supplier or even Tata Motors directly could disrupt manufacturing operations, compromise sensitive customer data, affect connected vehicle functionalities, leading to significant operational downtime, financial losses, regulatory penalties, and severe reputational damage.",
+    "Affected_Nodes": [
+      "IT Systems",
+      "Supply Chain",
+      "Connected Car Services",
+      "Customer Trust",
+      "Reputational Risk",
+      "Operational Continuity"
+    ],
+    "Risk_Type": "Operational",
+    "Severity": "High",
+    "Risk_Score": 8,
+    "source": "Gemini AI",
+    "publishedAt": "2025-10-04T03:32:36.874782",
+    "url": "https://gemini-ai-generated.com"
+  }
+]
