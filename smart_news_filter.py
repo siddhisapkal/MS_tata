@@ -61,10 +61,27 @@ class SmartNewsFilter:
             if 'articles' in data and data['articles']:
                 articles = []
                 for article in data['articles']['results']:
+                    # Parse and format the date properly
+                    pub_date = article.get('date', '')
+                    if pub_date:
+                        try:
+                            # Convert to readable format
+                            if isinstance(pub_date, str):
+                                # Try to parse different date formats
+                                for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ']:
+                                    try:
+                                        parsed_date = datetime.strptime(pub_date.split('T')[0], '%Y-%m-%d')
+                                        pub_date = parsed_date.strftime('%Y-%m-%d %H:%M')
+                                        break
+                                    except:
+                                        continue
+                        except:
+                            pub_date = str(pub_date)
+                    
                     articles.append({
                         'Title': article.get('title', ''),
                         'Explanation': article.get('body', '') or article.get('summary', ''),
-                        'publishedAt': article.get('date', ''),
+                        'publishedAt': pub_date,
                         'url': article.get('url', ''),
                         'source': article.get('source', {}).get('title', 'Unknown'),
                         'raw_content': article
@@ -190,30 +207,96 @@ class SmartNewsFilter:
                 article['Severity'] = None
                 article['Risk_Score'] = None
                 
-                # Determine risk type based on categories - AUTOMOTIVE/EV SPECIFIC
-                if 'supply_chain_risks' in relevance_data['matched_categories']:
-                    article['Risk_Type'] = 'Supply Chain'
-                elif 'ev_policy_regulatory' in relevance_data['matched_categories']:
-                    article['Risk_Type'] = 'Regulatory'
-                elif 'automotive_risks' in relevance_data['matched_categories']:
+                # Determine risk type based on content analysis - AUTOMOTIVE/EV SPECIFIC
+                title_lower = article['Title'].lower()
+                content_lower = article.get('Explanation', '').lower()
+                combined_text = f"{title_lower} {content_lower}"
+                
+                # More intelligent risk type classification
+                if any(keyword in combined_text for keyword in ['recall', 'defect', 'safety', 'quality', 'manufacturing', 'production', 'facility', 'plant', 'assembly']):
                     article['Risk_Type'] = 'Operational'
-                elif 'ev_technology' in relevance_data['matched_categories']:
+                elif any(keyword in combined_text for keyword in ['supply chain', 'shortage', 'semiconductor', 'chip', 'lithium', 'battery', 'raw material', 'component', 'disruption']):
+                    article['Risk_Type'] = 'Supply Chain'
+                elif any(keyword in combined_text for keyword in ['policy', 'regulation', 'subsidy', 'fame', 'government', 'ministry', 'compliance', 'standard', 'emission', 'safety']):
+                    article['Risk_Type'] = 'Regulatory'
+                elif any(keyword in combined_text for keyword in ['technology', 'innovation', 'battery', 'charging', 'autonomous', 'ai', 'software', 'digital', 'connectivity']):
                     article['Risk_Type'] = 'Technology'
-                elif 'competitors_automotive' in relevance_data['matched_categories']:
+                elif any(keyword in combined_text for keyword in ['competitor', 'mahindra', 'maruti', 'hyundai', 'toyota', 'honda', 'market share', 'competition', 'rival']):
                     article['Risk_Type'] = 'Competitive'
-                else:
+                elif any(keyword in combined_text for keyword in ['financial', 'revenue', 'profit', 'loss', 'investment', 'funding', 'merger', 'acquisition', 'partnership', 'deal']):
+                    article['Risk_Type'] = 'Financial'
+                elif any(keyword in combined_text for keyword in ['cyber', 'security', 'hack', 'breach', 'data', 'privacy', 'digital security']):
+                    article['Risk_Type'] = 'Cybersecurity'
+                elif any(keyword in combined_text for keyword in ['environmental', 'sustainability', 'carbon', 'emission', 'green', 'climate', 'esg']):
+                    article['Risk_Type'] = 'Environmental'
+                elif any(keyword in combined_text for keyword in ['demerger', 'restructuring', 'reorganization', 'spin-off', 'divestment', 'strategic']):
                     article['Risk_Type'] = 'Strategic'
-                
-                # Determine severity based on score
-                if relevance_data['relevance_score'] >= 0.8:
-                    article['Severity'] = 'High'
-                elif relevance_data['relevance_score'] >= 0.5:
-                    article['Severity'] = 'Medium'
                 else:
-                    article['Severity'] = 'Low'
+                    # Fallback based on categories
+                    if 'supply_chain_risks' in relevance_data['matched_categories']:
+                        article['Risk_Type'] = 'Supply Chain'
+                    elif 'ev_policy_regulatory' in relevance_data['matched_categories']:
+                        article['Risk_Type'] = 'Regulatory'
+                    elif 'automotive_risks' in relevance_data['matched_categories']:
+                        article['Risk_Type'] = 'Operational'
+                    elif 'ev_technology' in relevance_data['matched_categories']:
+                        article['Risk_Type'] = 'Technology'
+                    elif 'competitors_automotive' in relevance_data['matched_categories']:
+                        article['Risk_Type'] = 'Competitive'
+                    else:
+                        article['Risk_Type'] = 'Strategic'
                 
-                # Calculate risk score (0-10)
-                article['Risk_Score'] = round(relevance_data['relevance_score'] * 10, 2)
+                # Determine severity based on content analysis and score
+                severity_keywords_high = ['crisis', 'shortage', 'recall', 'defect', 'safety', 'emergency', 'urgent', 'critical', 'severe', 'major', 'significant', 'disruption', 'halt', 'stop', 'shutdown']
+                severity_keywords_medium = ['concern', 'issue', 'challenge', 'problem', 'delay', 'slow', 'decline', 'drop', 'fall', 'reduction', 'moderate', 'some', 'partial']
+                severity_keywords_low = ['growth', 'increase', 'rise', 'improvement', 'positive', 'good', 'strong', 'record', 'success', 'achievement', 'milestone']
+                
+                # Check for severity indicators in content
+                has_high_severity = any(keyword in combined_text for keyword in severity_keywords_high)
+                has_medium_severity = any(keyword in combined_text for keyword in severity_keywords_medium)
+                has_low_severity = any(keyword in combined_text for keyword in severity_keywords_low)
+                
+                # Determine severity based on content and score
+                if has_high_severity or relevance_data['relevance_score'] >= 0.8:
+                    article['Severity'] = 'High'
+                elif has_medium_severity or relevance_data['relevance_score'] >= 0.5:
+                    article['Severity'] = 'Medium'
+                elif has_low_severity or relevance_data['relevance_score'] >= 0.3:
+                    article['Severity'] = 'Low'
+                else:
+                    article['Severity'] = 'Low'  # Default to low if no clear indicators
+                
+                # Calculate risk score (0-10) based on content analysis
+                base_score = relevance_data['relevance_score'] * 10
+                
+                # Adjust score based on risk type and severity indicators
+                if article['Risk_Type'] == 'Supply Chain':
+                    base_score += 1.0  # Supply chain risks are critical for automotive
+                elif article['Risk_Type'] == 'Regulatory':
+                    base_score += 0.8  # Regulatory changes can significantly impact business
+                elif article['Risk_Type'] == 'Operational':
+                    base_score += 1.2  # Operational issues like recalls are very serious
+                elif article['Risk_Type'] == 'Technology':
+                    base_score += 0.5  # Technology risks are important but manageable
+                elif article['Risk_Type'] == 'Competitive':
+                    base_score += 0.3  # Competitive risks are moderate
+                elif article['Risk_Type'] == 'Financial':
+                    base_score += 0.7  # Financial risks are significant
+                elif article['Risk_Type'] == 'Cybersecurity':
+                    base_score += 1.5  # Cybersecurity risks are very serious
+                elif article['Risk_Type'] == 'Environmental':
+                    base_score += 0.6  # Environmental risks are important
+                
+                # Adjust based on severity keywords
+                if has_high_severity:
+                    base_score += 1.0
+                elif has_medium_severity:
+                    base_score += 0.5
+                elif has_low_severity:
+                    base_score -= 0.5
+                
+                # Ensure score is within 0-10 range
+                article['Risk_Score'] = round(max(0, min(10, base_score)), 2)
                 
                 filtered_articles.append(article)
         

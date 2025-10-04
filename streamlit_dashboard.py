@@ -16,6 +16,7 @@ from live_news_integration import LiveNewsRiskAnalyzer
 from smart_news_filter import SmartNewsFilter
 import joblib
 import warnings
+import google.generativeai as genai
 warnings.filterwarnings('ignore')
 
 # Page configuration
@@ -105,7 +106,7 @@ def fetch_live_news(api_key, query, num_articles, hours_back):
 def fetch_smart_filtered_news(api_key, query, num_articles, hours_back):
     """Fetch real news from NewsAPI and use smart filtering"""
     try:
-        with st.spinner(f"Fetching fresh news from last {hours_back} hours..."):
+        with st.spinner(f"Fetching fresh news from last {hours_back//24} days..."):
             # Always create a new filter instance to avoid caching
             smart_filter = SmartNewsFilter(api_key)
             articles = smart_filter.process_news_pipeline(
@@ -127,13 +128,107 @@ def fetch_smart_filtered_news(api_key, query, num_articles, hours_back):
         st.session_state.news_data = articles
         st.session_state.analysis_results = results
         
-        # Show fresh data info
-        st.info(f"✅ Fetched {len(articles)} fresh articles from last {hours_back} hours")
+        # Show fresh data info with search enhancement stats
+        if 'enhanced_query' in st.session_state:
+            st.info(f"✅ Fetched {len(articles)} fresh articles using AI-enhanced search from last {hours_back//24} days")
+            st.success(f"🎯 Search enhanced from '{user_query}' to '{query[:100]}...'")
+        else:
+            st.info(f"✅ Fetched {len(articles)} fresh articles from last {hours_back//24} days")
         
         return results
     except Exception as e:
         st.error(f"Error fetching/analyzing smart filtered news: {e}")
         return []
+
+def get_gemini_search_enhancement(gemini_key, user_query):
+    """Use Gemini AI to enhance search queries with relevant keywords"""
+    try:
+        if not gemini_key or len(gemini_key) < 10:
+            return user_query  # Return original query if no API key
+        
+        # Configure Gemini
+        genai.configure(api_key=gemini_key)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        # Create enhancement prompt
+        prompt = f"""
+You are an expert in automotive industry and Tata Motors risk analysis. 
+
+Given the user's search query: "{user_query}"
+
+Generate an enhanced search query that will find the most relevant news articles for Tata Motors risk analysis. Include:
+
+1. **Core automotive/EV keywords** (electric vehicle, automotive, car, vehicle, etc.)
+2. **Tata Motors specific terms** (Tata Motors, JLR, Jaguar Land Rover, Nexon, Harrier, etc.)
+3. **Risk-related terms** (supply chain, lithium, semiconductor, chip shortage, battery, charging, policy, regulation, subsidy, FAME, etc.)
+4. **Competitor terms** (Mahindra, Maruti, Hyundai, Toyota, Honda, etc.)
+5. **Industry terms** (automotive industry, auto industry, passenger vehicle, commercial vehicle, etc.)
+
+Return ONLY the enhanced search query as a single string, optimized for news API search. Make it comprehensive but focused on Tata Motors risk analysis.
+
+Example: If user searches "lithium", return something like "Tata Motors lithium battery electric vehicle automotive supply chain EV charging infrastructure"
+"""
+        
+        response = model.generate_content(prompt)
+        enhanced_query = response.text.strip()
+        
+        # Clean up the response
+        enhanced_query = enhanced_query.replace('"', '').replace("'", '')
+        
+        return enhanced_query
+        
+    except Exception as e:
+        print(f"Error enhancing search query: {e}")
+        return user_query  # Return original query if enhancement fails
+
+def get_gemini_analysis(gemini_key, articles, analysis_results):
+    """Get detailed analysis from Gemini AI"""
+    try:
+        if not gemini_key or len(gemini_key) < 10:
+            return "Please provide a valid Gemini API key for AI analysis."
+        
+        # Configure Gemini
+        genai.configure(api_key=gemini_key)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        # Prepare news data for analysis
+        news_summary = ""
+        for i, article in enumerate(articles[:10], 1):  # Limit to top 10 articles
+            news_summary += f"\n{i}. {article['Title']}\n"
+            news_summary += f"   Source: {article['source']}\n"
+            news_summary += f"   Published: {article.get('publishedAt', 'N/A')}\n"
+            news_summary += f"   URL: {article.get('url', 'N/A')}\n"
+            news_summary += f"   Risk Type: {article.get('Risk_Type', 'N/A')}\n"
+            news_summary += f"   Severity: {article.get('Severity', 'N/A')}\n"
+            news_summary += f"   Risk Score: {article.get('Risk_Score', 'N/A')}\n"
+            news_summary += f"   Explanation: {article.get('Explanation', '')[:200]}...\n"
+            news_summary += "   " + "="*50 + "\n"
+        
+        # Create analysis prompt
+        prompt = f"""
+You are an expert risk analyst for Tata Motors. Analyze the following news articles and provide a comprehensive risk assessment:
+
+{news_summary}
+
+Please provide:
+
+1. **EXECUTIVE SUMMARY** (2-3 sentences)
+2. **KEY RISKS IDENTIFIED** (Top 5 risks with severity)
+3. **IMMEDIATE ACTIONS REQUIRED** (What Tata Motors should do now)
+4. **STRATEGIC RECOMMENDATIONS** (Long-term strategies)
+5. **COMPETITIVE LANDSCAPE** (How competitors are affecting Tata Motors)
+6. **SUPPLY CHAIN IMPACT** (Any supply chain risks identified)
+7. **REGULATORY CONCERNS** (Policy changes affecting the company)
+8. **FINANCIAL IMPLICATIONS** (Potential financial impact)
+
+Focus on actionable insights and specific recommendations. Be concise but comprehensive.
+"""
+        
+        response = model.generate_content(prompt)
+        return response.text
+        
+    except Exception as e:
+        return f"Error getting Gemini analysis: {str(e)}"
 
 def create_risk_distribution_chart(results_df):
     """Create risk distribution charts"""
@@ -303,20 +398,73 @@ def main():
     api_key = st.sidebar.text_input(
         "NewsAPI.ai Key",
         value="74830ae7-dea2-498e-b538-344e7a149eff",
-        type="password"
+        type="password",
+        help="Your NewsAPI.ai API key for fetching live news"
+    )
+    
+    gemini_key = st.sidebar.text_input(
+        "Gemini API Key",
+        value="AIzaSyAQDAZEPDDWwNx3loUxWLQfUjytNASG7ac",
+        type="password",
+        help="Your Gemini API key for AI-powered analysis and chatbot"
     )
     
     # Search Configuration
     st.sidebar.subheader("Search Configuration")
-    query = st.sidebar.text_input("Search Query", value="Tata Motors")
+    user_query = st.sidebar.text_input("Search Query", value="Tata Motors")
+    
+    # AI-Enhanced Search
+    col1, col2 = st.sidebar.columns([2, 1])
+    with col1:
+        if st.button("🤖 Enhance Search with AI"):
+            if gemini_key and len(gemini_key) > 10:
+                with st.spinner("Enhancing search query with AI..."):
+                    enhanced_query = get_gemini_search_enhancement(gemini_key, user_query)
+                    st.session_state.enhanced_query = enhanced_query
+                    st.success("Search enhanced!")
+            else:
+                st.error("Please provide a valid Gemini API key for search enhancement.")
+    
+    with col2:
+        if st.button("🔄 Reset"):
+            if 'enhanced_query' in st.session_state:
+                del st.session_state.enhanced_query
+            st.success("Search reset!")
+    
+    # Use enhanced query if available, otherwise use original
+    query = st.session_state.get('enhanced_query', user_query)
+    
+    # Show the actual query being used
+    if 'enhanced_query' in st.session_state:
+        st.sidebar.info(f"🔍 Enhanced Query: {query[:50]}...")
+    else:
+        st.sidebar.info(f"🔍 Using Query: {query}")
+    
+    # Quick search suggestions
+    st.sidebar.markdown("**💡 Quick Search Suggestions:**")
+    suggestions = [
+        "lithium", "semiconductor", "EV policy", "supply chain", 
+        "competition", "battery", "charging", "FAME scheme"
+    ]
+    
+    cols = st.sidebar.columns(2)
+    for i, suggestion in enumerate(suggestions):
+        with cols[i % 2]:
+            if st.button(f"🔍 {suggestion}", key=f"suggest_{i}"):
+                st.session_state.user_query = suggestion
+                st.rerun()
+    
     num_articles = st.sidebar.slider("Number of Articles", 5, 50, 20)
-    hours_back = st.sidebar.slider("Hours Back", 1, 168, 24)
+    days_back = st.sidebar.slider("Days Back", 1, 30, 3)
     
     # Show time range
     from datetime import datetime, timedelta
     to_time = datetime.now()
-    from_time = to_time - timedelta(hours=hours_back)
+    from_time = to_time - timedelta(days=days_back)
     st.sidebar.info(f"Searching from: {from_time.strftime('%Y-%m-%d %H:%M')} to {to_time.strftime('%Y-%m-%d %H:%M')}")
+    
+    # Convert days to hours for API
+    hours_back = days_back * 24
     
     # Load Models
     if st.sidebar.button("🔄 Load Models"):
@@ -365,6 +513,210 @@ def main():
     # Main Content
     if st.session_state.analysis_results:
         results_df = pd.DataFrame(st.session_state.analysis_results)
+        
+        # Display All Extracted News at the Top
+        st.markdown("---")
+        st.markdown("## 📰 All Extracted News Articles")
+        
+        # Show search context and summary
+        search_context = f"**Topic:** {query} | **Time Period:** Last {days_back} days | **Articles Found:** {len(results_df)}"
+        st.info(search_context)
+        
+        # Summary statistics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("📰 Total Articles", len(results_df))
+        
+        with col2:
+            high_count = len(results_df[results_df['Severity'] == 'High']) if 'Severity' in results_df.columns else 0
+            st.metric("🔴 High Risk", high_count)
+        
+        with col3:
+            medium_count = len(results_df[results_df['Severity'] == 'Medium']) if 'Severity' in results_df.columns else 0
+            st.metric("🟡 Medium Risk", medium_count)
+        
+        with col4:
+            low_count = len(results_df[results_df['Severity'] == 'Low']) if 'Severity' in results_df.columns else 0
+            st.metric("🟢 Low Risk", low_count)
+        
+        # Risk type distribution
+        if 'Risk_Type' in results_df.columns:
+            risk_types = results_df['Risk_Type'].value_counts()
+            if not risk_types.empty:
+                st.markdown("**📊 Risk Type Distribution:**")
+                risk_cols = st.columns(len(risk_types))
+                for i, (risk_type, count) in enumerate(risk_types.items()):
+                    with risk_cols[i]:
+                        st.metric(risk_type, count)
+        
+        st.markdown("---")
+        
+        # Create expandable sections for different risk levels
+        high_risk = results_df[results_df['Severity'] == 'High'] if 'Severity' in results_df.columns else pd.DataFrame()
+        medium_risk = results_df[results_df['Severity'] == 'Medium'] if 'Severity' in results_df.columns else pd.DataFrame()
+        low_risk = results_df[results_df['Severity'] == 'Low'] if 'Severity' in results_df.columns else pd.DataFrame()
+        no_severity = results_df[results_df['Severity'].isna()] if 'Severity' in results_df.columns else pd.DataFrame()
+        
+        # High Risk Articles
+        if not high_risk.empty:
+            with st.expander(f"🔴 High Risk Articles ({len(high_risk)})", expanded=True):
+                for idx, article in high_risk.iterrows():
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        # Make title clickable
+                        if pd.notna(article.get('url', '')) and article['url'] != 'N/A' and article['url'] != '':
+                            st.markdown(f"**[{article['Title']}]({article['url']})**")
+                        else:
+                            st.markdown(f"**{article['Title']}**")
+                        
+                        # Show source and date
+                        source_date = f"📰 {article.get('source', 'Unknown')}"
+                        if pd.notna(article.get('publishedAt', '')) and article['publishedAt'] != 'N/A':
+                            source_date += f" | 📅 {article['publishedAt']}"
+                        st.caption(source_date)
+                        
+                        # Show risk details
+                        risk_info = f"🎯 Risk: {article.get('Risk_Type', 'N/A')} | ⚠️ Severity: {article.get('Severity', 'N/A')} | 📊 Score: {article.get('Risk_Score', 'N/A')}"
+                        st.caption(risk_info)
+                        
+                        # Show explanation snippet
+                        if pd.notna(article.get('Explanation', '')):
+                            explanation = article['Explanation'][:200] + "..." if len(str(article['Explanation'])) > 200 else article['Explanation']
+                            st.text(explanation)
+                    
+                    with col2:
+                        # Risk score indicator
+                        score = article.get('Risk_Score', 0)
+                        if score >= 8:
+                            st.markdown("🔴 **HIGH**")
+                        elif score >= 5:
+                            st.markdown("🟡 **MED**")
+                        else:
+                            st.markdown("🟢 **LOW**")
+                    
+                    st.markdown("---")
+        
+        # Medium Risk Articles
+        if not medium_risk.empty:
+            with st.expander(f"🟡 Medium Risk Articles ({len(medium_risk)})"):
+                for idx, article in medium_risk.iterrows():
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        if pd.notna(article.get('url', '')) and article['url'] != 'N/A' and article['url'] != '':
+                            st.markdown(f"**[{article['Title']}]({article['url']})**")
+                        else:
+                            st.markdown(f"**{article['Title']}**")
+                        
+                        source_date = f"📰 {article.get('source', 'Unknown')}"
+                        if pd.notna(article.get('publishedAt', '')) and article['publishedAt'] != 'N/A':
+                            source_date += f" | 📅 {article['publishedAt']}"
+                        st.caption(source_date)
+                        
+                        risk_info = f"🎯 Risk: {article.get('Risk_Type', 'N/A')} | ⚠️ Severity: {article.get('Severity', 'N/A')} | 📊 Score: {article.get('Risk_Score', 'N/A')}"
+                        st.caption(risk_info)
+                        
+                        if pd.notna(article.get('Explanation', '')):
+                            explanation = article['Explanation'][:150] + "..." if len(str(article['Explanation'])) > 150 else article['Explanation']
+                            st.text(explanation)
+                    
+                    with col2:
+                        score = article.get('Risk_Score', 0)
+                        if score >= 8:
+                            st.markdown("🔴 **HIGH**")
+                        elif score >= 5:
+                            st.markdown("🟡 **MED**")
+                        else:
+                            st.markdown("🟢 **LOW**")
+                    
+                    st.markdown("---")
+        
+        # Low Risk Articles
+        if not low_risk.empty:
+            with st.expander(f"🟢 Low Risk Articles ({len(low_risk)})"):
+                for idx, article in low_risk.iterrows():
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        if pd.notna(article.get('url', '')) and article['url'] != 'N/A' and article['url'] != '':
+                            st.markdown(f"**[{article['Title']}]({article['url']})**")
+                        else:
+                            st.markdown(f"**{article['Title']}**")
+                        
+                        source_date = f"📰 {article.get('source', 'Unknown')}"
+                        if pd.notna(article.get('publishedAt', '')) and article['publishedAt'] != 'N/A':
+                            source_date += f" | 📅 {article['publishedAt']}"
+                        st.caption(source_date)
+                        
+                        risk_info = f"🎯 Risk: {article.get('Risk_Type', 'N/A')} | ⚠️ Severity: {article.get('Severity', 'N/A')} | 📊 Score: {article.get('Risk_Score', 'N/A')}"
+                        st.caption(risk_info)
+                    
+                    with col2:
+                        score = article.get('Risk_Score', 0)
+                        if score >= 8:
+                            st.markdown("🔴 **HIGH**")
+                        elif score >= 5:
+                            st.markdown("🟡 **MED**")
+                        else:
+                            st.markdown("🟢 **LOW**")
+                    
+                    st.markdown("---")
+        
+        # No Severity Articles
+        if not no_severity.empty:
+            with st.expander(f"⚪ Other Articles ({len(no_severity)})"):
+                for idx, article in no_severity.iterrows():
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        if pd.notna(article.get('url', '')) and article['url'] != 'N/A' and article['url'] != '':
+                            st.markdown(f"**[{article['Title']}]({article['url']})**")
+                        else:
+                            st.markdown(f"**{article['Title']}**")
+                        
+                        source_date = f"📰 {article.get('source', 'Unknown')}"
+                        if pd.notna(article.get('publishedAt', '')) and article['publishedAt'] != 'N/A':
+                            source_date += f" | 📅 {article['publishedAt']}"
+                        st.caption(source_date)
+                        
+                        risk_info = f"🎯 Risk: {article.get('Risk_Type', 'N/A')} | ⚠️ Severity: {article.get('Severity', 'N/A')} | 📊 Score: {article.get('Risk_Score', 'N/A')}"
+                        st.caption(risk_info)
+                    
+                    with col2:
+                        score = article.get('Risk_Score', 0)
+                        if score >= 8:
+                            st.markdown("🔴 **HIGH**")
+                        elif score >= 5:
+                            st.markdown("🟡 **MED**")
+                        else:
+                            st.markdown("🟢 **LOW**")
+                    
+                    st.markdown("---")
+        
+        # Add Gemini AI Analysis Section
+        st.markdown("---")
+        st.markdown("## 🤖 AI-Powered Risk Analysis")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            if st.button("🧠 Get Detailed AI Analysis", type="primary"):
+                if gemini_key and len(gemini_key) > 10:
+                    with st.spinner("🤖 Gemini AI is analyzing the news and generating detailed insights..."):
+                        analysis = get_gemini_analysis(gemini_key, st.session_state.news_data, st.session_state.analysis_results)
+                        st.session_state.gemini_analysis = analysis
+                else:
+                    st.error("Please provide a valid Gemini API key for AI analysis.")
+        
+        with col2:
+            if st.button("🗑️ Clear Analysis"):
+                if 'gemini_analysis' in st.session_state:
+                    del st.session_state.gemini_analysis
+                st.success("Analysis cleared!")
+        
+        # Display Gemini Analysis
+        if 'gemini_analysis' in st.session_state:
+            st.markdown("### 📊 AI Analysis Results")
+            st.markdown(st.session_state.gemini_analysis)
+        
+        st.markdown("---")
         
         # Key Metrics
         st.subheader("📈 Key Metrics")
@@ -447,9 +799,19 @@ def main():
             filtered_df = filtered_df[filtered_df['Severity'] == severity_filter]
         filtered_df = filtered_df[filtered_df['Risk_Score'] >= min_risk_score]
         
-        # Display filtered results
-        display_df = filtered_df[['Title', 'Risk_Type', 'Severity', 'Risk_Score', 'source', 'publishedAt']].copy()
+        # Display filtered results with clickable links
+        display_df = filtered_df[['Title', 'Risk_Type', 'Severity', 'Risk_Score', 'source', 'publishedAt', 'url']].copy()
         display_df['Risk_Score'] = display_df['Risk_Score'].round(2)
+        
+        # Add clickable links
+        def make_clickable(url, title):
+            if pd.notna(url) and url != 'N/A' and url != '':
+                return f'<a href="{url}" target="_blank" style="color: #1f77b4; text-decoration: none;">{title[:60]}...</a>'
+            return title[:60] + "..."
+        
+        display_df['Title_Link'] = display_df.apply(lambda x: make_clickable(x['url'], x['Title']), axis=1)
+        display_df = display_df[['Title_Link', 'Risk_Type', 'Severity', 'Risk_Score', 'source', 'publishedAt']]
+        display_df.columns = ['Title (Click to Read)', 'Risk Type', 'Severity', 'Risk Score', 'Source', 'Published']
         
         # Color code risk scores
         def color_risk_score(val):
@@ -460,8 +822,8 @@ def main():
             else:
                 return 'background-color: #e8f5e8'
         
-        styled_df = display_df.style.applymap(color_risk_score, subset=['Risk_Score'])
-        st.dataframe(styled_df, use_container_width=True)
+        styled_df = display_df.style.applymap(color_risk_score, subset=['Risk Score'])
+        st.dataframe(styled_df, use_container_width=True, height=400)
         
         # Download results
         csv = results_df.to_csv(index=False)
